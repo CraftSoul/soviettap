@@ -162,6 +162,11 @@
             cursor: default;
             pointer-events: auto;
             border: 1px solid rgba(255, 200, 150, 0.10);
+            transition: opacity 0.3s ease;
+        }
+        .volume-control.disabled {
+            pointer-events: none;
+            opacity: 0.35;
         }
         .volume-control label {
             color: rgba(255, 210, 160, 0.6);
@@ -180,6 +185,9 @@
             outline: none;
             transition: background 0.2s;
         }
+        .volume-control input[type="range"]:disabled {
+            opacity: 0.5;
+        }
         .volume-control input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -193,6 +201,10 @@
         .volume-control input[type="range"]::-webkit-slider-thumb:hover {
             background: rgba(255, 210, 160, 0.9);
         }
+        .volume-control input[type="range"]:disabled::-webkit-slider-thumb {
+            cursor: not-allowed;
+            background: rgba(255, 210, 160, 0.3);
+        }
         .volume-control input[type="range"]::-moz-range-thumb {
             width: 16px;
             height: 16px;
@@ -200,6 +212,10 @@
             border: none;
             background: rgba(255, 210, 160, 0.7);
             cursor: pointer;
+        }
+        .volume-control input[type="range"]:disabled::-moz-range-thumb {
+            cursor: not-allowed;
+            background: rgba(255, 210, 160, 0.3);
         }
         .volume-control .vol-value {
             color: rgba(255, 210, 160, 0.5);
@@ -261,7 +277,8 @@
         /* ============================================================
          *  拉伸Tap —— 四列音效 (sl.wav, boom.wav, sla.wav, a.wav)
          *  自下至上升调 · 仿大狗Tap特效 + 背景音乐
-         *  隐藏网格 · 背景音量可调（默认1/4）· 点击遮罩不触发播放
+         *  隐藏网格 · 背景音量可调（默认1/4）
+         *  触发后等待节拍播放（量化队列）
          * ============================================================ */
 
         // ---------- 常量 ----------
@@ -368,7 +385,7 @@
             master = ctx.createGain();
             master.gain.value = MASTER_GAIN;
             bgmBus = ctx.createGain();
-            bgmBus.gain.value = bgmVolume; // 使用用户设定的音量
+            bgmBus.gain.value = bgmVolume;
             sfxBus = ctx.createGain();
             sfxBus.gain.value = 1;
 
@@ -1265,7 +1282,6 @@
                     cell.className = 'cell';
                     cell.dataset.col = c;
                     cell.dataset.row = r;
-                    // 标签已隐藏（display: none）
                     gridEl.appendChild(cell);
                     cells.push(cell);
                 }
@@ -1339,6 +1355,8 @@
         function setupVolumeSlider() {
             const slider = document.getElementById('bgm-volume');
             const display = document.getElementById('vol-value');
+            const control = document.getElementById('volume-control');
+
             slider.addEventListener('input', () => {
                 const val = parseFloat(slider.value);
                 bgmVolume = val;
@@ -1347,8 +1365,8 @@
                     bgmBus.gain.setTargetAtTime(val, ctx.currentTime, 0.02);
                 }
             });
-            // 阻止滑块事件冒泡到遮罩
-            const control = document.getElementById('volume-control');
+
+            // 阻止滑块事件冒泡到遮罩，避免误触发启动
             control.addEventListener('pointerdown', (e) => e.stopPropagation());
             control.addEventListener('pointerup', (e) => e.stopPropagation());
             control.addEventListener('click', (e) => e.stopPropagation());
@@ -1360,6 +1378,12 @@
             const overlay = document.getElementById('overlay');
             overlay.classList.add('hide');
             document.getElementById('hint').style.opacity = '0';
+
+            // 禁用音量控件
+            const slider = document.getElementById('bgm-volume');
+            const control = document.getElementById('volume-control');
+            slider.disabled = true;
+            control.classList.add('disabled');
 
             initAudio();
             if (ctx.state === 'suspended') ctx.resume();
@@ -1399,7 +1423,6 @@
             // 点击遮罩只启动，不触发播放
             const overlay = document.getElementById('overlay');
             overlay.addEventListener('click', (e) => {
-                // 如果点击的是音量控制区域，不启动
                 if (e.target.closest('.volume-control')) return;
                 start();
             });
@@ -1417,7 +1440,7 @@
                 if (!ctx) initAudio();
             }, { once: true });
 
-            console.log('拉伸Tap 已加载 (网格隐藏，背景音量可调)');
+            console.log('拉伸Tap 已加载 (网格隐藏，背景音量可调，触发后量化播放)');
         }
 
         if (document.readyState === 'loading') {
