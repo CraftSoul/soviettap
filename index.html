@@ -45,7 +45,7 @@
             z-index: 1;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(8, 1fr);
+            grid-template-rows: repeat(6, 1fr);
             gap: 2px;
             padding: 2px;
             pointer-events: none;
@@ -143,6 +143,7 @@
             animation: pulseHint 1.8s ease-in-out infinite;
             margin-top: -6px;
             cursor: pointer;
+            min-height: 2.2em;
         }
         @keyframes pulseHint {
             0%,
@@ -176,6 +177,35 @@
         .inspire-links a:hover {
             color: rgba(255, 220, 180, 0.85);
             border-color: rgba(255, 200, 150, 0.4);
+        }
+
+        /* 底部链接（在遮罩内） */
+        .overlay-bottom-links {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-top: 2px;
+        }
+        .overlay-bottom-links a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            color: rgba(255, 210, 160, 0.5);
+            transition: color 0.25s, transform 0.2s;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        .overlay-bottom-links a:hover {
+            color: rgba(255, 220, 180, 0.85);
+            transform: scale(1.12);
+        }
+        .overlay-bottom-links svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+            stroke: none;
         }
 
         /* 音量控制 */
@@ -253,49 +283,6 @@
             text-align: center;
         }
 
-        /* 底部按钮 */
-        #bottom-links {
-            position: absolute;
-            bottom: max(14px, env(safe-area-inset-bottom));
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 8;
-            display: flex;
-            gap: 14px;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.25);
-            padding: 6px 14px;
-            border-radius: 30px;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 200, 150, 0.08);
-            transition: opacity 0.4s ease;
-        }
-        #bottom-links a {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            color: rgba(255, 210, 160, 0.5);
-            transition: color 0.25s, transform 0.2s;
-            cursor: pointer;
-            pointer-events: auto;
-        }
-        #bottom-links a:hover {
-            color: rgba(255, 220, 180, 0.85);
-            transform: scale(1.12);
-        }
-        #bottom-links svg {
-            width: 22px;
-            height: 22px;
-            fill: currentColor;
-            stroke: none;
-        }
-        /* 确保链接可点击 */
-        #bottom-links a * {
-            pointer-events: none;
-        }
-
         /* ---- 响应式 ---- */
         @media (max-width: 480px) {
             #title {
@@ -318,17 +305,13 @@
             .inspire-links a {
                 font-size: 11px;
             }
-            #bottom-links {
-                padding: 4px 10px;
-                gap: 10px;
+            .overlay-bottom-links a {
+                width: 26px;
+                height: 26px;
             }
-            #bottom-links a {
-                width: 24px;
-                height: 24px;
-            }
-            #bottom-links svg {
-                width: 18px;
-                height: 18px;
+            .overlay-bottom-links svg {
+                width: 20px;
+                height: 20px;
             }
         }
         @media (max-height: 600px) {
@@ -354,7 +337,7 @@
         <!-- 遮罩 -->
         <div id="overlay">
             <div class="big" id="start-trigger">拉伸<em>Tap</em></div>
-            <div class="sub" id="start-trigger-sub">点 击 任 意 位 置 开 始</div>
+            <div class="sub" id="start-hint">点 击 任 意 位 置 开 始</div>
 
             <div class="inspire-links">
                 <a href="https://aidn.jp/mikutap/" target="_blank" rel="noopener noreferrer">Mikutap</a>
@@ -366,24 +349,24 @@
                 <input type="range" id="bgm-volume" min="0" max="1" step="0.01" value="0.25" />
                 <span class="vol-value" id="vol-value">25%</span>
             </div>
-        </div>
 
-        <!-- 底部链接 -->
-        <div id="bottom-links">
-            <a href="https://github.com/CraftSoul/soviettap/" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.235-3.22-.123-.3-.535-1.52.117-3.16 0 0 1.008-.322 3.3 1.23.96-.267 1.98-.399 3-.399s2.04.132 3 .399c2.292-1.552 3.3-1.23 3.3-1.23.653 1.64.24 2.86.118 3.16.768.84 1.233 1.91 1.233 3.22 0 4.61-2.804 5.62-5.476 5.92.43.37.824 1.102.824 2.22 0 1.602-.015 2.894-.015 3.287 0 .322.216.694.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-            </a>
-            <a href="https://space.bilibili.com/3546775476505152" target="_blank" rel="noopener noreferrer" aria-label="Bilibili">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.813 4.653h.854l1.338 1.259c.477.447.713.944.713 1.491v8.557c0 .547-.236 1.044-.713 1.491l-1.338 1.259h-.854l1.371-1.259c.35-.33.525-.718.525-1.163V7.403c0-.445-.175-.833-.525-1.163l-1.371-1.587zm-9.792 0l-1.37 1.587c-.35.33-.526.718-.526 1.163v8.557c0 .445.176.833.526 1.163l1.37 1.259h.854L7.47 16.457c-.477-.447-.713-.944-.713-1.491V7.403c0-.547.236-1.044.713-1.491l1.338-1.259h-.854zM3.492 1.955c-.822 0-1.491.668-1.491 1.491v17.108c0 .823.669 1.491 1.491 1.491h17.016c.823 0 1.491-.668 1.491-1.491V3.446c0-.823-.668-1.491-1.491-1.491H3.492z"/></svg>
-            </a>
+            <div class="overlay-bottom-links">
+                <a href="https://github.com/CraftSoul/soviettap/" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.235-3.22-.123-.3-.535-1.52.117-3.16 0 0 1.008-.322 3.3 1.23.96-.267 1.98-.399 3-.399s2.04.132 3 .399c2.292-1.552 3.3-1.23 3.3-1.23.653 1.64.24 2.86.118 3.16.768.84 1.233 1.91 1.233 3.22 0 4.61-2.804 5.62-5.476 5.92.43.37.824 1.102.824 2.22 0 1.602-.015 2.894-.015 3.287 0 .322.216.694.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+                </a>
+                <a href="https://space.bilibili.com/3546775476505152" target="_blank" rel="noopener noreferrer" aria-label="Bilibili">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.813 4.653h.854l1.338 1.259c.477.447.713.944.713 1.491v8.557c0 .547-.236 1.044-.713 1.491l-1.338 1.259h-.854l1.371-1.259c.35-.33.525-.718.525-1.163V7.403c0-.445-.175-.833-.525-1.163l-1.371-1.587zm-9.792 0l-1.37 1.587c-.35.33-.526.718-.526 1.163v8.557c0 .445.176.833.526 1.163l1.37 1.259h.854L7.47 16.457c-.477-.447-.713-.944-.713-1.491V7.403c0-.547.236-1.044.713-1.491l1.338-1.259h-.854zM3.492 1.955c-.822 0-1.491.668-1.491 1.491v17.108c0 .823.669 1.491 1.491 1.491h17.016c.823 0 1.491-.668 1.491-1.491V3.446c0-.823-.668-1.491-1.491-1.491H3.492z"/></svg>
+                </a>
+            </div>
         </div>
     </div>
 
     <script>
         /* ============================================================
-         *  拉伸Tap —— 四列音效 (sl.wav, boom.wav, sla.wav, a.wav)
-         *  音调反向（上高下低）· 点击修复 · 灵感来源 · 底部链接
-         *  遮罩彻底移除 · 触发后量化播放
+         *  拉伸Tap —— 四列音效 (boom, sla, sl, a)
+         *  行数6 · 音调反向 · 点击修复 · 量化播放
+         *  音量：boom减半，a加倍
+         *  遮罩含灵感来源和底部链接
          * ============================================================ */
 
         // ---------- 常量 ----------
@@ -396,9 +379,10 @@
         const INPUT_QUEUE_LOOKAHEAD = 0.03;
 
         const COLS = 4;
-        const ROWS = 8;
-        const SAMPLE_NAMES = ['sl', 'boom', 'sla', 'a'];
-        const SAMPLE_FILES = ['sl.wav', 'boom.wav', 'sla.wav', 'a.wav'];
+        const ROWS = 6; // 减少2行
+        // 轨道顺序：boom, sla, sl, a
+        const SAMPLE_NAMES = ['boom', 'sla', 'sl', 'a'];
+        const SAMPLE_FILES = ['boom.wav', 'sla.wav', 'sl.wav', 'a.wav'];
 
         // ---------- 全局状态 ----------
         let ctx = null;
@@ -692,17 +676,21 @@
             return t;
         }
 
-        // ---------- 播放音效（音调反向：上高下低） ----------
+        // ---------- 播放音效（音调反向 + 音量调整） ----------
         function playSample(sampleName, pitchTier, when) {
             const buffer = buffers[sampleName];
             if (!buffer) return;
-            // 反向：pitchTier=0 → 最高音 (2.0), pitchTier=7 → 最低音 (0.6)
+            // 反向：pitchTier=0 → 最高音 (2.0), pitchTier=5 → 最低音 (0.6)
             const rate = 0.6 + ((ROWS - 1 - pitchTier) / (ROWS - 1)) * 1.4;
             const source = ctx.createBufferSource();
             source.buffer = buffer;
             source.playbackRate.setValueAtTime(rate, when);
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.9, when);
+            let volFactor = 1.0;
+            if (sampleName === 'boom') volFactor = 0.5;
+            else if (sampleName === 'a') volFactor = 2.0;
+            const baseGain = 0.9 * volFactor;
+            gain.gain.setValueAtTime(baseGain, when);
             gain.gain.exponentialRampToValueAtTime(0.001, when + 0.4);
             source.connect(gain);
             gain.connect(sfxBus);
@@ -747,9 +735,8 @@
             }
         }
 
-        // 不再取消队列（点击修复）
         function cancelQueuedInputs(pointerId) {
-            // 保留队列，不取消任何条目（点击修复）
+            // 保留队列，不取消（点击修复）
         }
 
         // ---------- 网格交互 ----------
@@ -1416,7 +1403,7 @@
 
             stage.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
-                if (!started) { start(); return; }
+                if (!started) { return; } // 只有启动后才响应
                 try { stage.setPointerCapture(e.pointerId); } catch (_) {}
                 tryActivate(e.pointerId, e.clientX, e.clientY);
             });
@@ -1429,14 +1416,11 @@
             });
 
             stage.addEventListener('pointerup', (e) => {
-                const state = pointers.get(e.pointerId);
-                // 不取消队列，只清除状态
                 pointers.delete(e.pointerId);
                 try { stage.releasePointerCapture(e.pointerId); } catch (_) {}
             });
 
             stage.addEventListener('pointercancel', (e) => {
-                const state = pointers.get(e.pointerId);
                 pointers.delete(e.pointerId);
                 try { stage.releasePointerCapture(e.pointerId); } catch (_) {}
             });
@@ -1444,7 +1428,7 @@
             stage.addEventListener('contextmenu', (e) => e.preventDefault());
 
             window.addEventListener('blur', () => {
-                // 不清除队列，防止丢失
+                // 不清除队列
             });
         }
 
@@ -1463,49 +1447,56 @@
                 }
             });
 
-            // 阻止滑块事件冒泡到遮罩
             control.addEventListener('pointerdown', (e) => e.stopPropagation());
             control.addEventListener('pointerup', (e) => e.stopPropagation());
             control.addEventListener('click', (e) => e.stopPropagation());
         }
 
-        // ---------- 启动 ----------
-        function start() {
-            if (started) return;
-            const overlay = document.getElementById('overlay');
-            if (overlay) {
-                // 彻底移除遮罩
-                overlay.remove();
-            }
+        // ---------- 加载并启动 ----------
+        function beginLoad() {
+            const hint = document.getElementById('start-hint');
+            const trigger = document.getElementById('start-trigger');
+            hint.textContent = '加载音频文件中...';
+            hint.style.animation = 'none';
+            trigger.style.cursor = 'default';
+            trigger.style.pointerEvents = 'none';
 
-            // 禁用音量控件（已经移除，但以防万一）
+            // 禁用音量控件
             const slider = document.getElementById('bgm-volume');
-            if (slider) slider.disabled = true;
             const control = document.getElementById('volume-control');
-            if (control) control.classList.add('disabled');
+            slider.disabled = true;
+            control.classList.add('disabled');
 
+            // 初始化音频上下文
             initAudio();
             if (ctx.state === 'suspended') ctx.resume();
 
-            if (bgmBus) {
-                bgmBus.gain.value = bgmVolume;
-            }
-
+            // 加载音效
             loadSamples().then(() => {
-                startTime = ctx.currentTime + 0.12;
-                nextNoteTime = startTime;
-                lastCommittedInputTime = -Infinity;
-                inputQueue.length = 0;
-                stepCount = 0;
-                started = true;
-                console.log('启动完成');
-                spawnEffect(0, 3, ctx.currentTime + 0.05);
+                // 加载完成，启动游戏
+                startGame();
             }).catch(err => {
-                console.warn('加载音效失败，仍可使用合成', err);
-                startTime = ctx.currentTime + 0.12;
-                nextNoteTime = startTime;
-                started = true;
+                console.warn('加载音效失败，仍继续', err);
+                startGame();
             });
+        }
+
+        function startGame() {
+            if (started) return;
+            // 移除遮罩
+            const overlay = document.getElementById('overlay');
+            if (overlay) overlay.remove();
+
+            // 启动时间线
+            startTime = ctx.currentTime + 0.12;
+            nextNoteTime = startTime;
+            lastCommittedInputTime = -Infinity;
+            inputQueue.length = 0;
+            stepCount = 0;
+            started = true;
+            console.log('游戏已启动');
+            // 触发初始特效
+            spawnEffect(0, 0, ctx.currentTime + 0.05);
         }
 
         // ---------- 初始化 ----------
@@ -1517,22 +1508,23 @@
             setupEvents();
             setupVolumeSlider();
 
-            // 遮罩点击触发启动，但排除链接和音量控件
+            // 遮罩点击触发加载
             const overlay = document.getElementById('overlay');
-            // 使用事件代理，但链接会冒泡，所以需要阻止
             overlay.addEventListener('click', (e) => {
                 const target = e.target;
                 if (target.closest('a') || target.closest('.volume-control')) return;
-                start();
+                if (started) return;
+                beginLoad();
             });
             overlay.addEventListener('touchstart', (e) => {
                 const target = e.target;
                 if (target.closest('a') || target.closest('.volume-control')) return;
                 e.preventDefault();
-                start();
+                if (started) return;
+                beginLoad();
             }, { passive: false });
 
-            // 链接点击不触发启动，且阻止冒泡
+            // 链接阻止冒泡
             overlay.querySelectorAll('a').forEach(link => {
                 link.addEventListener('click', (e) => e.stopPropagation());
                 link.addEventListener('touchstart', (e) => e.stopPropagation());
@@ -1541,12 +1533,12 @@
             window.addEventListener('resize', resizeFx);
             requestAnimationFrame(tick);
 
-            // 预加热音频
+            // 预热音频
             document.addEventListener('click', () => {
                 if (!ctx) initAudio();
             }, { once: true });
 
-            console.log('拉伸Tap 已加载 (音调反向，点击修复，遮罩移除)');
+            console.log('拉伸Tap 已加载 (行数6，轨道顺序 boom,sla,sl,a)');
         }
 
         if (document.readyState === 'loading') {
@@ -1555,6 +1547,5 @@
             init();
         }
     </script>
-
 </body>
 </html>
