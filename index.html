@@ -337,7 +337,7 @@
         <!-- 遮罩 -->
         <div id="overlay">
             <div class="big" id="start-trigger">拉伸<em>Tap</em></div>
-            <div class="sub" id="start-hint">点 击 任 意 位 置 开 始</div>
+            <div class="sub" id="start-hint">按 Alt + F4 开 始</div>
 
             <div class="inspire-links">
                 <a href="https://aidn.jp/mikutap/" target="_blank" rel="noopener noreferrer">Mikutap</a>
@@ -351,12 +351,8 @@
             </div>
 
             <div class="overlay-bottom-links">
-                <a href="https://github.com/CraftSoul/soviettap/" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.235-3.22-.123-.3-.535-1.52.117-3.16 0 0 1.008-.322 3.3 1.23.96-.267 1.98-.399 3-.399s2.04.132 3 .399c2.292-1.552 3.3-1.23 3.3-1.23.653 1.64.24 2.86.118 3.16.768.84 1.233 1.91 1.233 3.22 0 4.61-2.804 5.62-5.476 5.92.43.37.824 1.102.824 2.22 0 1.602-.015 2.894-.015 3.287 0 .322.216.694.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
-                </a>
-                <a href="https://space.bilibili.com/3546775476505152" target="_blank" rel="noopener noreferrer" aria-label="Bilibili">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.813 4.653h.854l1.338 1.259c.477.447.713.944.713 1.491v8.557c0 .547-.236 1.044-.713 1.491l-1.338 1.259h-.854l1.371-1.259c.35-.33.525-.718.525-1.163V7.403c0-.445-.175-.833-.525-1.163l-1.371-1.587zm-9.792 0l-1.37 1.587c-.35.33-.526.718-.526 1.163v8.557c0 .445.176.833.526 1.163l1.37 1.259h.854L7.47 16.457c-.477-.447-.713-.944-.713-1.491V7.403c0-.547.236-1.044.713-1.491l1.338-1.259h-.854zM3.492 1.955c-.822 0-1.491.668-1.491 1.491v17.108c0 .823.669 1.491 1.491 1.491h17.016c.823 0 1.491-.668 1.491-1.491V3.446c0-.823-.668-1.491-1.491-1.491H3.492z"/></svg>
-                </a>
+                <a href="https://github.com/CraftSoul/kards-image-tool" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg" alt="github"> GitHub</a>
+                <a href="https://space.bilibili.com/3546775476505152" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bilibili.svg" alt="bili"> BiliBili</a>
             </div>
         </div>
     </div>
@@ -676,12 +672,11 @@
             return t;
         }
 
-        // ---------- 播放音效（音调反向 + 音量调整） ----------
+        // ---------- 播放音效 ----------
         function playSample(sampleName, pitchTier, when) {
             const buffer = buffers[sampleName];
             if (!buffer) return;
-            // 反向：pitchTier=0 → 最高音 (2.0), pitchTier=5 → 最低音 (0.6)
-            const rate = 0.6 + ((ROWS - 1 - pitchTier) / (ROWS - 1)) * 1.4;
+            const rate = 1 + ((ROWS - 1 - pitchTier) / (ROWS - 1));
             const source = ctx.createBufferSource();
             source.buffer = buffer;
             source.playbackRate.setValueAtTime(rate, when);
