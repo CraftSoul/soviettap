@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>拉伸Tap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            background: #4F3826;
+            font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #stage {
+            position: fixed;
+            inset: 0;
+            background: #4F3826;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        /* ---- 画布 ---- */
+        #fx {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* ---- 轨道容器 ---- */
+        #tracks {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            justify-content: center;
+            padding: 0 4%;
+            gap: 2%;
+        }
+        .track {
+            flex: 1;
+            position: relative;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: inset 0 0 0 1px rgba(255, 200, 120, 0.12);
+            transition: box-shadow 0.15s ease;
+            cursor: pointer;
+            touch-action: none;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .track.active {
+            box-shadow: inset 0 0 0 2px rgba(255, 200, 120, 0.45), 0 0 30px rgba(255, 180, 80, 0.08);
+        }
+
+        /* 轨道标签 */
+        .track-label {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+            color: rgba(255, 200, 150, 0.5);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            pointer-events: none;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: color 0.25s ease, opacity 0.25s ease;
+        }
+        .track.active .track-label {
+            color: rgba(255, 210, 160, 0.85);
+        }
+
+        /* ---- 轨道内的触发点 ---- */
+        .track-points {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column-reverse;
+            /* 从下到上排列 */;
+            align-items: center;
+            justify-content: space-evenly;
+            padding: 10% 0;
+            gap: 0;
+        }
+        .point {
+            width: 70%;
+            max-width: 44px;
+            aspect-ratio: 1/1;
+            border-radius: 50%;
+            background: rgba(255, 200, 140, 0.08);
+            box-shadow: 0 0 0 1px rgba(255, 200, 140, 0.10);
+            transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
+            will-change: transform, background, box-shadow;
+            pointer-events: none;
+            position: relative;
+        }
+        .point::after {
+            content: '';
+            position: absolute;
+            inset: 20%;
+            border-radius: 50%;
+            background: rgba(255, 200, 140, 0.04);
+            transition: background 0.12s ease, transform 0.12s ease;
+        }
+        .point.hit {
+            background: rgba(255, 210, 120, 0.6);
+            box-shadow: 0 0 24px rgba(255, 200, 100, 0.45), 0 0 60px rgba(255, 180, 80, 0.15);
+            transform: scale(1.25);
+        }
+        .point.hit::after {
+            background: rgba(255, 230, 180, 0.5);
+            transform: scale(1.6);
+        }
+        .point.glow {
+            background: rgba(255, 210, 120, 0.20);
+            box-shadow: 0 0 18px rgba(255, 200, 100, 0.20);
+        }
+
+        /* ---- 顶部标题 ---- */
+        #title {
+            position: absolute;
+            top: max(18px, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            color: rgba(255, 210, 160, 0.7);
+            font-size: clamp(18px, 4.2vw, 36px);
+            font-weight: 900;
+            letter-spacing: 0.3em;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        #title span {
+            color: rgba(255, 220, 180, 0.9);
+        }
+
+        /* ---- 底部提示 ---- */
+        #hint {
+            position: absolute;
+            bottom: max(16px, env(safe-area-inset-bottom) + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            color: rgba(255, 200, 150, 0.25);
+            font-size: 12px;
+            font-weight: 400;
+            letter-spacing: 0.15em;
+            pointer-events: none;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+            transition: opacity 0.8s ease;
+        }
+        #hint.hidden {
+            opacity: 0;
+        }
+
+        /* ---- 启动遮罩 ---- */
+        #overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(79, 56, 38, 0.85);
+            backdrop-filter: blur(4px);
+            cursor: pointer;
+            transition: opacity 0.6s ease;
+        }
+        #overlay.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #overlay .big {
+            font-size: clamp(42px, 10vw, 82px);
+            font-weight: 900;
+            letter-spacing: 0.2em;
+            color: rgba(255, 220, 180, 0.85);
+            text-shadow: 0 6px 30px rgba(0, 0, 0, 0.5);
+        }
+        #overlay .big em {
+            font-style: normal;
+            color: rgba(255, 200, 140, 0.5);
+        }
+        #overlay .sub {
+            font-size: clamp(13px, 2.2vmin, 18px);
+            letter-spacing: 0.4em;
+            color: rgba(255, 200, 150, 0.4);
+            animation: pulseHint 1.8s ease-in-out infinite;
+        }
+        @keyframes pulseHint {
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* ---- 响应式 ---- */
+        @media (max-width: 480px) {
+            #tracks {
+                padding: 0 2%;
+                gap: 1.5%;
+            }
+            .track-label {
+                font-size: 9px;
+                bottom: 4px;
+            }
+            .point {
+                width: 55%;
+                max-width: 32px;
+            }
+            #title {
+                top: 12px;
+                font-size: clamp(14px, 5vw, 22px);
+                letter-spacing: 0.2em;
+            }
+            #hint {
+                font-size: 10px;
+                bottom: 10px;
+            }
+        }
+        @media (max-height: 600px) {
+            .track-points {
+                padding: 6% 0;
+            }
+            .point {
+                width: 50%;
+                max-width: 28px;
+            }
+            .track-label {
+                font-size: 8px;
+                bottom: 2px;
+            }
+        }
+        @media (min-width: 768px) {
+            .point {
+                width: 60%;
+                max-width: 52px;
+            }
+            .track-points {
+                padding: 12% 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="stage">
+        <!-- 特效画布 -->
+        <canvas id="fx"></canvas>
+
+        <!-- 轨道 -->
+        <div id="tracks" role="group" aria-label="四个音轨">
+            <div class="track" data-track="0" aria-label="sl 音轨">
+                <div class="track-points"></div>
+                <div class="track-label">sl</div>
+            </div>
+            <div class="track" data-track="1" aria-label="boom 音轨">
+                <div class="track-points"></div>
+                <div class="track-label">boom</div>
+            </div>
+            <div class="track" data-track="2" aria-label="sla 音轨">
+                <div class="track-points"></div>
+                <div class="track-label">sla</div>
+            </div>
+            <div class="track" data-track="3" aria-label="a 音轨">
+                <div class="track-points"></div>
+                <div class="track-label">a</div>
+            </div>
+        </div>
+
+        <!-- 标题 -->
+        <div id="title">拉伸<span>Tap</span></div>
+        <div id="hint">滑动 · 点击 · 升调</div>
+
+        <!-- 启动遮罩 -->
+        <div id="overlay">
+            <div class="big">拉伸<em>Tap</em></div>
+            <div class="sub">点 击 任 意 位 置 开 始</div>
+        </div>
+    </div>
+
+    <script>
+        /* ============================================================
+         *  拉伸Tap —— 仿 Mikutap / 大狗Tap
+         *  四轨道：sl / boom / sla / a
+         *  自下至上升调
+         * ============================================================ */
+
+        /* ---------- 音频上下文 ---------- */
+        let ctx = null;
+        let master = null;
+        let started = false;
+
+        /* ---------- 轨道配置 ---------- */
+        const TRACK_COUNT = 4;
+        const POINTS_PER_TRACK = 8;
+
+        // 四种音色配置：波形 + 额外参数
+        const TRACK_VOICES = [{
+            name: 'sl',
+            wave: 'sine',
+            desc: '正弦波 · 温暖',
+            color: '#ffb07c',
+        }, {
+            name: 'boom',
+            wave: 'sawtooth',
+            desc: '锯齿波 · 厚重',
+            color: '#ff9a6c',
+        }, {
+            name: 'sla',
+            wave: 'square',
+            desc: '方波 · 明亮',
+            color: '#ffc48c',
+        }, {
+            name: 'a',
+            wave: 'triangle',
+            desc: '三角波 · 圆润',
+            color: '#ffd4a0',
+        }, ];
+
+        // 音高范围：C3 (130.81) 到 C5 (523.25) 约两个八度
+        const PITCH_MIN = 130.81; // C3
+        const PITCH_MAX = 523.25; // C5
+
+        /* ---------- 状态 ---------- */
+        let trackElements = [];
+        let pointElements = [];
+        let activePoint = null;
+        let lastTrackIndex = -1;
+        let lastPointIndex = -1;
+
+        // 粒子系统
+        let particles = [];
+        let fxCanvas, fxCtx, fxW, fxH;
+
+        // 音符活跃列表
+        let activeNotes = [];
+
+        /* ============================================================
+         *  音频合成
+         * ============================================================ */
+        function initAudio() {
+            ctx = new(window.AudioContext || window.webkitAudioContext)();
+            master = ctx.createGain();
+            master.gain.value = 0.72;
+            master.connect(ctx.destination);
+
+            // 简单压缩，让声音更饱满
+            const comp = ctx.createDynamicsCompressor();
+            comp.threshold.value = -18;
+            comp.knee.value = 20;
+            comp.ratio.value = 4;
+            comp.attack.value = 0.005;
+            comp.release.value = 0.12;
+            master.connect(comp);
+            comp.connect(ctx.destination);
+            // 重新连线
+            master.disconnect();
+            master.connect(comp);
+        }
+
+        /* 合成一个音符：不同音色通过不同波形 + 滤波 + 包络实现 */
+        function playNote(trackIndex, pitchIndex, when) {
+            if (!ctx) return;
+
+            const now = when || ctx.currentTime;
+            const track = TRACK_VOICES[trackIndex];
+            const freq = PITCH_MIN * Math.pow(PITCH_MAX / PITCH_MIN, pitchIndex / (POINTS_PER_TRACK - 1));
+
+            // 主振荡器
+            const osc = ctx.createOscillator();
+            osc.type = track.wave;
+            osc.frequency.setValueAtTime(freq, now);
+
+            // 增益包络
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.32, now + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35 + pitchIndex * 0.015);
+
+            // 音色塑形
+            let output = gain;
+
+            // 不同音色加不同效果
+            if (trackIndex === 1) { // boom: 低通滤波 + 额外泛音
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 600 + pitchIndex * 45;
+                filter.Q.value = 1.2;
+                osc.connect(filter);
+                filter.connect(gain);
+                output = gain;
+
+                // 加一个子振荡器 (低八度)
+                const sub = ctx.createOscillator();
+                sub.type = 'sawtooth';
+                sub.frequency.value = freq * 0.5;
+                const subGain = ctx.createGain();
+                subGain.gain.setValueAtTime(0.06, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+                sub.connect(subGain);
+                subGain.connect(master);
+                sub.start(now);
+                sub.stop(now + 0.32);
+            } else if (trackIndex === 2) { // sla: 带通滤波 + 共振
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = freq * 2.2;
+                filter.Q.value = 1.8;
+                osc.connect(filter);
+                filter.connect(gain);
+                output = gain;
+            } else if (trackIndex === 3) { // a: 合唱效果 (两个轻微失谐的振荡器)
+                const osc2 = ctx.createOscillator();
+                osc2.type = 'triangle';
+                osc2.frequency.value = freq * 1.003;
+                const gain2 = ctx.createGain();
+                gain2.gain.setValueAtTime(0, now);
+                gain2.gain.linearRampToValueAtTime(0.18, now + 0.015);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.32 + pitchIndex * 0.012);
+                osc2.connect(gain2);
+                gain2.connect(master);
+                osc2.start(now);
+                osc2.stop(now + 0.38);
+
+                // 主振荡器用正弦波
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                output = gain;
+            } else { // sl: 纯正弦 + 轻微颤音
+                const lfo = ctx.createOscillator();
+                lfo.type = 'sine';
+                lfo.frequency.value = 5.5 + pitchIndex * 0.3;
+                const lfoGain = ctx.createGain();
+                lfoGain.gain.value = 6 + pitchIndex * 0.8;
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc.frequency);
+                lfo.start(now);
+                lfo.stop(now + 0.4);
+                osc.connect(gain);
+                output = gain;
+            }
+
+            output.connect(master);
+            osc.start(now);
+            osc.stop(now + 0.42);
+
+            // 记录活跃音符，用于释放
+            const note = { osc, gain, output, trackIndex, pitchIndex, freq, endTime: now + 0.42 };
+            activeNotes.push(note);
+            // 自动清理
+            setTimeout(() => {
+                const idx = activeNotes.indexOf(note);
+                if (idx >= 0) {
+                    try { osc.disconnect(); } catch (_) {}
+                    try { gain.disconnect(); } catch (_) {}
+                    activeNotes.splice(idx, 1);
+                }
+            }, 480);
+        }
+
+        /* ============================================================
+         *  粒子特效
+         * ============================================================ */
+        function initFx() {
+            fxCanvas = document.getElementById('fx');
+            fxCtx = fxCanvas.getContext('2d');
+            resizeFx();
+            window.addEventListener('resize', resizeFx);
+        }
+
+        function resizeFx() {
+            const dpr = Math.min(devicePixelRatio || 1, 2);
+            const rect = document.getElementById('stage').getBoundingClientRect();
+            fxW = rect.width;
+            fxH = rect.height;
+            fxCanvas.width = Math.round(fxW * dpr);
+            fxCanvas.height = Math.round(fxH * dpr);
+            fxCanvas.style.width = fxW + 'px';
+            fxCanvas.style.height = fxH + 'px';
+            fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function spawnParticles(x, y, color, count = 18) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 80 + Math.random() * 200;
+                const life = 0.5 + Math.random() * 0.8;
+                const size = 3 + Math.random() * 8;
+                const hue = Math.random() > 0.5 ? 30 : 40;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed * (0.4 + Math.random() * 0.6),
+                    vy: Math.sin(angle) * speed * (0.4 + Math.random() * 0.6) - 60,
+                    life,
+                    maxLife: life,
+                    size,
+                    color: color || `hsl(${hue + Math.random() * 20}, 85%, ${55 + Math.random() * 30}%)`,
+                    decay: 0.97 + Math.random() * 0.02,
+                    gravity: 180 + Math.random() * 120,
+                });
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += p.gravity * dt;
+                p.vx *= p.decay;
+                p.vy *= p.decay;
+                p.life -= dt;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            // 限制粒子数量
+            if (particles.length > 400) {
+                particles.splice(0, particles.length - 400);
+            }
+        }
+
+        function drawParticles() {
+            fxCtx.clearRect(0, 0, fxW, fxH);
+            for (const p of particles) {
+                const alpha = Math.max(0, p.life / p.maxLife);
+                fxCtx.globalAlpha = alpha * 0.85;
+                fxCtx.fillStyle = p.color;
+                const s = p.size * (0.3 + 0.7 * (p.life / p.maxLife));
+                fxCtx.beginPath();
+                fxCtx.arc(p.x, p.y, s, 0, Math.PI * 2);
+                fxCtx.fill();
+            }
+            fxCtx.globalAlpha = 1;
+        }
+
+        /* ============================================================
+         *  交互逻辑
+         * ============================================================ */
+        function getTrackAndPoint(clientX, clientY) {
+            const stageRect = document.getElementById('stage').getBoundingClientRect();
+            const x = clientX - stageRect.left;
+            const y = clientY - stageRect.top;
+
+            for (let t = 0; t < trackElements.length; t++) {
+                const track = trackElements[t];
+                const rect = track.getBoundingClientRect();
+                const lx = rect.left - stageRect.left;
+                const ly = rect.top - stageRect.top;
+                const rw = rect.width;
+                const rh = rect.height;
+                if (x >= lx && x <= lx + rw && y >= ly && y <= ly + rh) {
+                    // 计算在轨道内的垂直位置 (0~1, 从下到上)
+                    const relY = (y - ly) / rh; // 0=顶部, 1=底部
+                    const pIndex = Math.min(POINTS_PER_TRACK - 1, Math.floor(relY * POINTS_PER_TRACK));
+                    return { trackIndex: t, pointIndex: pIndex };
+                }
+            }
+            return null;
+        }
+
+        function triggerPoint(trackIndex, pointIndex, clientX, clientY) {
+            if (trackIndex < 0 || trackIndex >= TRACK_COUNT) return;
+            if (pointIndex < 0 || pointIndex >= POINTS_PER_TRACK) return;
+
+            // 播放音符
+            if (ctx) {
+                const now = ctx.currentTime;
+                playNote(trackIndex, pointIndex, now);
+            }
+
+            // 视觉反馈
+            const track = trackElements[trackIndex];
+            const points = track.querySelectorAll('.point');
+            const el = points[pointIndex];
+            if (el) {
+                el.classList.remove('hit');
+                // 强制重排以重启动画
+                void el.offsetWidth;
+                el.classList.add('hit');
+                setTimeout(() => el.classList.remove('hit'), 200);
+
+                // 高亮轨道
+                track.classList.add('active');
+                clearTimeout(track._activeTimer);
+                track._activeTimer = setTimeout(() => track.classList.remove('active'), 300);
+            }
+
+            // 粒子
+            if (clientX && clientY) {
+                const color = TRACK_VOICES[trackIndex].color;
+                spawnParticles(clientX, clientY, color, 14 + pointIndex * 2);
+            } else {
+                // 如果没传坐标，从元素位置估算
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    const cx = rect.left + rect.width / 2;
+                    const cy = rect.top + rect.height / 2;
+                    const color = TRACK_VOICES[trackIndex].color;
+                    spawnParticles(cx, cy, color, 14 + pointIndex * 2);
+                }
+            }
+
+            // 记录最后触发的点
+            lastTrackIndex = trackIndex;
+            lastPointIndex = pointIndex;
+        }
+
+        function handlePointer(clientX, clientY) {
+            if (!started) return;
+            const result = getTrackAndPoint(clientX, clientY);
+            if (!result) return;
+            const { trackIndex, pointIndex } = result;
+            // 避免同一位置重复触发
+            if (lastTrackIndex === trackIndex && lastPointIndex === pointIndex) {
+                // 但仍然可以触发粒子，但音符不重复
+                // 但为了体验，我们允许快速重复触发
+                // 实际上 Mikutap 允许连续触发
+            }
+            triggerPoint(trackIndex, pointIndex, clientX, clientY);
+        }
+
+        /* ============================================================
+         *  事件绑定
+         * ============================================================ */
+        function setupEvents() {
+            const stage = document.getElementById('stage');
+
+            // 鼠标事件
+            stage.addEventListener('mousedown', (e) => {
+                if (!started) { start(); return; }
+                handlePointer(e.clientX, e.clientY);
+            });
+
+            stage.addEventListener('mousemove', (e) => {
+                if (!started) return;
+                if (e.buttons === 1) {
+                    handlePointer(e.clientX, e.clientY);
+                }
+            });
+
+            // 触摸事件
+            stage.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!started) { start(); return; }
+                const touch = e.touches[0];
+                if (touch) handlePointer(touch.clientX, touch.clientY);
+            }, { passive: false });
+
+            stage.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!started) return;
+                const touch = e.touches[0];
+                if (touch) handlePointer(touch.clientX, touch.clientY);
+            }, { passive: false });
+
+            stage.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                // 不重置 lastTrackIndex，让下一次触摸重新开始
+            }, { passive: false });
+
+            // 防止右键菜单
+            stage.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            // 窗口失焦时重置状态，避免卡键
+            window.addEventListener('blur', () => {
+                lastTrackIndex = -1;
+                lastPointIndex = -1;
+                // 清理所有音符
+                for (const note of activeNotes) {
+                    try { note.osc.stop(); } catch (_) {}
+                    try { note.osc.disconnect(); } catch (_) {}
+                    try { note.gain.disconnect(); } catch (_) {}
+                }
+                activeNotes = [];
+            });
+        }
+
+        /* ============================================================
+         *  构建轨道UI
+         * ============================================================ */
+        function buildTracks() {
+            const container = document.getElementById('tracks');
+            trackElements = [];
+            pointElements = [];
+
+            for (let t = 0; t < TRACK_COUNT; t++) {
+                const track = container.children[t];
+                const pointsContainer = track.querySelector('.track-points');
+                pointsContainer.innerHTML = '';
+
+                for (let p = 0; p < POINTS_PER_TRACK; p++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'point';
+                    dot.dataset.track = t;
+                    dot.dataset.point = p;
+                    pointsContainer.appendChild(dot);
+                    pointElements.push(dot);
+                }
+
+                trackElements.push(track);
+            }
+        }
+
+        /* ============================================================
+         *  启动
+         * ============================================================ */
+        function start() {
+            if (started) return;
+            const overlay = document.getElementById('overlay');
+            overlay.classList.add('hide');
+
+            initAudio();
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
+            started = true;
+            document.getElementById('hint').classList.add('hidden');
+
+            // 触发一个初始音符，激活音频
+            setTimeout(() => {
+                if (ctx) {
+                    playNote(0, 3, ctx.currentTime + 0.05);
+                    spawnParticles(fxW / 2, fxH / 2, '#ffb07c', 12);
+                }
+            }, 80);
+        }
+
+        /* ============================================================
+         *  动画循环
+         * ============================================================ */
+        let lastFrameTime = 0;
+
+        function loop(time) {
+            const dt = Math.min(0.05, (time - lastFrameTime) / 1000);
+            lastFrameTime = time;
+
+            // 更新粒子
+            updateParticles(dt);
+            drawParticles();
+
+            // 轨道呼吸光效
+            const breathe = 0.6 + 0.4 * Math.sin(time / 1800);
+            for (const track of trackElements) {
+                if (!track.classList.contains('active')) {
+                    const alpha = 0.04 + 0.04 * breathe;
+                    track.style.boxShadow = `inset 0 0 0 1px rgba(255,200,120,${alpha})`;
+                }
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        /* ============================================================
+         *  初始化
+         * ============================================================ */
+        function init() {
+            buildTracks();
+            initFx();
+            setupEvents();
+
+            // 点击遮罩启动
+            document.getElementById('overlay').addEventListener('click', start);
+            document.getElementById('overlay').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                start();
+            }, { passive: false });
+
+            // 开始动画循环
+            requestAnimationFrame(loop);
+
+            // 预加热音频上下文（点击时再真正启动）
+            document.addEventListener('click', () => {
+                if (!ctx) {
+                    initAudio();
+                }
+            }, { once: true });
+
+            console.log('🐾 拉伸Tap 已加载');
+            console.log('🎵 四轨道: sl · boom · sla · a');
+            console.log('⬆️ 自下至上升调');
+        }
+
+        // 页面加载完成后初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+
+</body>
+</html>
