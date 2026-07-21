@@ -86,7 +86,6 @@
             color: rgba(255, 220, 180, 0.85);
         }
 
-        /* ---- 提示 ---- */
         #hint {
             position: absolute;
             bottom: max(16px, env(safe-area-inset-bottom) + 8px);
@@ -101,8 +100,6 @@
             white-space: nowrap;
             transition: opacity 0.8s ease;
         }
-
-        /* ---- 遮罩（含灵感来源和音量控制） ---- */
         #overlay {
             position: absolute;
             inset: 0;
@@ -155,7 +152,6 @@
             }
         }
 
-        /* 灵感来源链接 */
         .inspire-links {
             display: flex;
             gap: 18px;
@@ -179,36 +175,30 @@
             border-color: rgba(255, 200, 150, 0.4);
         }
 
-        /* 底部链接（在遮罩内） */
-        .overlay-bottom-links {
+        .footer-simple {
+            margin-top: 2.8rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid #928451;
             display: flex;
-            gap: 16px;
-            align-items: center;
-            margin-top: 2px;
-        }
-        .overlay-bottom-links a {
-            display: flex;
-            align-items: center;
+            flex-wrap: wrap;
             justify-content: center;
-            width: 30px;
-            height: 30px;
-            color: rgba(255, 210, 160, 0.5);
-            transition: color 0.25s, transform 0.2s;
-            cursor: pointer;
-            pointer-events: auto;
+            gap: 1.2rem 2rem;
+            font-size: 0.85rem;
         }
-        .overlay-bottom-links a:hover {
-            color: rgba(255, 220, 180, 0.85);
-            transform: scale(1.12);
+        .footer-simple a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+            color: #f8efcf;
+            background: rgba(0,0,0,0.4);
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            transition: 0.2s;
         }
-        .overlay-bottom-links svg {
-            width: 24px;
-            height: 24px;
-            fill: currentColor;
-            stroke: none;
-        }
+        .footer-simple a:hover { background: #b48b3f; color: #181d0e; }
+        .footer-simple img { width: 18px; height: 18px; filter: invert(0.95); }
 
-        /* 音量控制 */
         .volume-control {
             display: flex;
             align-items: center;
@@ -305,14 +295,6 @@
             .inspire-links a {
                 font-size: 11px;
             }
-            .overlay-bottom-links a {
-                width: 26px;
-                height: 26px;
-            }
-            .overlay-bottom-links svg {
-                width: 20px;
-                height: 20px;
-            }
         }
         @media (max-height: 600px) {
             .inspire-links {
@@ -350,7 +332,7 @@
                 <span class="vol-value" id="vol-value">25%</span>
             </div>
 
-            <div class="overlay-bottom-links">
+            <div class="footer-simple">
                 <a href="https://github.com/CraftSoul/kards-image-tool" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/github.svg" alt="github"> GitHub</a>
                 <a href="https://space.bilibili.com/3546775476505152" target="_blank"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bilibili.svg" alt="bili"> BiliBili</a>
             </div>
@@ -358,13 +340,6 @@
     </div>
 
     <script>
-        /* ============================================================
-         *  拉伸Tap —— 四列音效 (boom, sla, sl, a)
-         *  行数6 · 音调反向 · 点击修复 · 量化播放
-         *  音量：boom减半，a加倍
-         *  遮罩含灵感来源和底部链接
-         * ============================================================ */
-
         // ---------- 常量 ----------
         const BPM = 128;
         const SPB = 60 / BPM;
@@ -375,9 +350,8 @@
         const INPUT_QUEUE_LOOKAHEAD = 0.03;
 
         const COLS = 4;
-        const ROWS = 6; // 减少2行
-        // 轨道顺序：boom, sla, sl, a
-        const SAMPLE_NAMES = ['boom', 'sla', 'sl', 'a'];
+        const ROWS = 6;
+        const SAMPLE_NAMES = ['boom', 'sla', 'sl', 'a'];//赤色黎明，拉，伸，朱可夫
         const SAMPLE_FILES = ['boom.wav', 'sla.wav', 'sl.wav', 'a.wav'];
 
         // ---------- 全局状态 ----------
@@ -516,7 +490,7 @@
                         loadedCount++;
                         if (loadedCount === SAMPLE_NAMES.length) {
                             loadComplete = true;
-                            console.log('所有音效就绪（部分合成）');
+                            console.log('所有音效就绪');
                         }
                     });
             });
@@ -683,7 +657,7 @@
             const gain = ctx.createGain();
             let volFactor = 1.0;
             if (sampleName === 'boom') volFactor = 0.5;
-            else if (sampleName === 'a') volFactor = 2.0;
+            else if (sampleName === 'a') volFactor = 3.0;
             const baseGain = 0.9 * volFactor;
             gain.gain.setValueAtTime(baseGain, when);
             gain.gain.exponentialRampToValueAtTime(0.001, when + 0.4);
