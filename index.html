@@ -38,7 +38,7 @@
             pointer-events: none;
         }
 
-        /* ---- 网格 ---- */
+        /* ---- 网格（完全透明，仅用于布局和触发） ---- */
         #grid {
             position: absolute;
             inset: 0;
@@ -51,26 +51,20 @@
             pointer-events: none;
         }
         .cell {
-            background: rgba(255, 200, 150, 0.04);
+            background: transparent !important;
+            box-shadow: none !important;
             border-radius: 4px;
             transition: background 0.08s ease, box-shadow 0.08s ease, transform 0.08s ease;
             pointer-events: none;
             position: relative;
         }
         .cell.hit {
-            background: rgba(255, 210, 120, 0.35);
-            box-shadow: 0 0 20px rgba(255, 200, 100, 0.25);
+            background: rgba(255, 210, 120, 0.35) !important;
+            box-shadow: 0 0 20px rgba(255, 200, 100, 0.25) !important;
             transform: scale(0.96);
         }
         .cell .label {
-            position: absolute;
-            bottom: 2px;
-            right: 4px;
-            font-size: 8px;
-            color: rgba(255, 200, 150, 0.15);
-            letter-spacing: 0.04em;
-            pointer-events: none;
-            font-weight: 700;
+            display: none;
         }
 
         /* ---- 标题 ---- */
@@ -108,20 +102,21 @@
             transition: opacity 0.8s ease;
         }
 
-        /* ---- 遮罩 ---- */
+        /* ---- 遮罩（含音量控制） ---- */
         #overlay {
             position: absolute;
             inset: 0;
             z-index: 20;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 20px;
             align-items: center;
             justify-content: center;
             background: rgba(79, 56, 38, 0.85);
             backdrop-filter: blur(4px);
             cursor: pointer;
             transition: opacity 0.6s ease;
+            padding: 0 20px;
         }
         #overlay.hide {
             opacity: 0;
@@ -143,6 +138,7 @@
             letter-spacing: 0.4em;
             color: rgba(255, 200, 150, 0.4);
             animation: pulseHint 1.8s ease-in-out infinite;
+            margin-top: -4px;
         }
         @keyframes pulseHint {
             0%,
@@ -154,6 +150,70 @@
             }
         }
 
+        /* 音量控制 */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255, 200, 150, 0.08);
+            padding: 10px 18px;
+            border-radius: 30px;
+            backdrop-filter: blur(2px);
+            cursor: default;
+            pointer-events: auto;
+            border: 1px solid rgba(255, 200, 150, 0.10);
+        }
+        .volume-control label {
+            color: rgba(255, 210, 160, 0.6);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
+        .volume-control input[type="range"] {
+            width: 140px;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 200, 150, 0.2);
+            border-radius: 2px;
+            outline: none;
+            transition: background 0.2s;
+        }
+        .volume-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(255, 210, 160, 0.7);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .volume-control input[type="range"]::-webkit-slider-thumb:hover {
+            background: rgba(255, 210, 160, 0.9);
+        }
+        .volume-control input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 210, 160, 0.7);
+            cursor: pointer;
+        }
+        .volume-control .vol-value {
+            color: rgba(255, 210, 160, 0.5);
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        /* 阻止滑块事件冒泡到遮罩 */
+        .volume-control * {
+            pointer-events: auto;
+        }
+
         /* ---- 响应式 ---- */
         @media (max-width: 480px) {
             #title {
@@ -163,8 +223,15 @@
             #hint {
                 font-size: 10px;
             }
-            .cell .label {
-                font-size: 6px;
+            .volume-control input[type="range"] {
+                width: 100px;
+            }
+            .volume-control label {
+                font-size: 11px;
+            }
+            .volume-control .vol-value {
+                font-size: 11px;
+                min-width: 26px;
             }
         }
     </style>
@@ -182,6 +249,11 @@
         <div id="overlay">
             <div class="big">拉伸<em>Tap</em></div>
             <div class="sub">点 击 任 意 位 置 开 始</div>
+            <div class="volume-control" id="volume-control">
+                <label for="bgm-volume">背景音量</label>
+                <input type="range" id="bgm-volume" min="0" max="1" step="0.01" value="0.25" />
+                <span class="vol-value" id="vol-value">25%</span>
+            </div>
         </div>
     </div>
 
@@ -189,6 +261,7 @@
         /* ============================================================
          *  拉伸Tap —— 四列音效 (sl.wav, boom.wav, sla.wav, a.wav)
          *  自下至上升调 · 仿大狗Tap特效 + 背景音乐
+         *  隐藏网格 · 背景音量可调（默认1/4）· 点击遮罩不触发播放
          * ============================================================ */
 
         // ---------- 常量 ----------
@@ -216,23 +289,22 @@
         let nextNoteTime = 0;
         let stepCount = 0;
 
-        const buffers = {}; // 解码后的音效
+        let bgmVolume = 0.25; // 默认1/4
+
+        const buffers = {};
         let loadedCount = 0;
         let loadComplete = false;
 
-        // 输入队列
         const inputQueue = [];
         let inputSerial = 0;
         let lastCommittedInputTime = -Infinity;
         const pointers = new Map();
 
-        // 特效系统
         let fxCanvas, fxCtx, fxW, fxH;
         let fxList = [];
-        let beatP = 0; // 节拍脉冲
+        let beatP = 0;
         let lastTick = 0;
 
-        // 网格元素
         let gridEl;
         let cells = [];
 
@@ -296,7 +368,7 @@
             master = ctx.createGain();
             master.gain.value = MASTER_GAIN;
             bgmBus = ctx.createGain();
-            bgmBus.gain.value = 1;
+            bgmBus.gain.value = bgmVolume; // 使用用户设定的音量
             sfxBus = ctx.createGain();
             sfxBus.gain.value = 1;
 
@@ -312,7 +384,6 @@
             master.connect(comp);
             comp.connect(ctx.destination);
 
-            // 白噪声缓冲
             noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
             const d = noiseBuf.getChannelData(0);
             for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -337,7 +408,6 @@
                     })
                     .catch(err => {
                         console.warn(`加载 ${file} 失败，使用合成音色替代`, err);
-                        // 生成简单合成音作为降级
                         const len = ctx.sampleRate * 0.4;
                         const buf = ctx.createBuffer(1, len, ctx.sampleRate);
                         const data = buf.getChannelData(0);
@@ -509,7 +579,6 @@
         function playSample(sampleName, pitchTier, when) {
             const buffer = buffers[sampleName];
             if (!buffer) return;
-            // 升调：pitchTier 0~7 映射到 0.6 ~ 2.0
             const rate = 0.6 + (pitchTier / (ROWS - 1)) * 1.4;
             const source = ctx.createBufferSource();
             source.buffer = buffer;
@@ -1179,7 +1248,6 @@
             fxCanvas.style.width = fxW + 'px';
             fxCanvas.style.height = fxH + 'px';
             fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            // 重新对齐已有特效中心
             for (const e of fxList) { e.cx = fxW / 2;
                 e.cy = fxH / 2; }
         }
@@ -1197,10 +1265,7 @@
                     cell.className = 'cell';
                     cell.dataset.col = c;
                     cell.dataset.row = r;
-                    const label = document.createElement('span');
-                    label.className = 'label';
-                    label.textContent = SAMPLE_NAMES[c];
-                    cell.appendChild(label);
+                    // 标签已隐藏（display: none）
                     gridEl.appendChild(cell);
                     cells.push(cell);
                 }
@@ -1218,7 +1283,6 @@
                 const t = ctx.currentTime;
                 const phase = (((t - startTime) / SPB) % 1 + 1) % 1;
                 beatP = Math.pow(1 - phase, 2.4);
-                // 调度背景音乐
                 const horizon = t + INPUT_LOOKAHEAD;
                 while (nextNoteTime < horizon) {
                     scheduleStep(stepCount, nextNoteTime);
@@ -1271,6 +1335,25 @@
             });
         }
 
+        // ---------- 音量滑块 ----------
+        function setupVolumeSlider() {
+            const slider = document.getElementById('bgm-volume');
+            const display = document.getElementById('vol-value');
+            slider.addEventListener('input', () => {
+                const val = parseFloat(slider.value);
+                bgmVolume = val;
+                display.textContent = Math.round(val * 100) + '%';
+                if (bgmBus) {
+                    bgmBus.gain.setTargetAtTime(val, ctx.currentTime, 0.02);
+                }
+            });
+            // 阻止滑块事件冒泡到遮罩
+            const control = document.getElementById('volume-control');
+            control.addEventListener('pointerdown', (e) => e.stopPropagation());
+            control.addEventListener('pointerup', (e) => e.stopPropagation());
+            control.addEventListener('click', (e) => e.stopPropagation());
+        }
+
         // ---------- 启动 ----------
         function start() {
             if (started) return;
@@ -1281,6 +1364,11 @@
             initAudio();
             if (ctx.state === 'suspended') ctx.resume();
 
+            // 应用当前音量设置
+            if (bgmBus) {
+                bgmBus.gain.value = bgmVolume;
+            }
+
             loadSamples().then(() => {
                 startTime = ctx.currentTime + 0.12;
                 nextNoteTime = startTime;
@@ -1289,7 +1377,7 @@
                 stepCount = 0;
                 started = true;
                 console.log('启动完成');
-                // 触发一次初始特效
+                // 触发一次初始特效（不播放音效）
                 spawnEffect(0, 3, ctx.currentTime + 0.05);
             }).catch(err => {
                 console.warn('加载音效失败，仍可使用合成', err);
@@ -1306,9 +1394,17 @@
             buildGrid();
             resizeFx();
             setupEvents();
+            setupVolumeSlider();
 
-            document.getElementById('overlay').addEventListener('click', start);
-            document.getElementById('overlay').addEventListener('touchstart', (e) => {
+            // 点击遮罩只启动，不触发播放
+            const overlay = document.getElementById('overlay');
+            overlay.addEventListener('click', (e) => {
+                // 如果点击的是音量控制区域，不启动
+                if (e.target.closest('.volume-control')) return;
+                start();
+            });
+            overlay.addEventListener('touchstart', (e) => {
+                if (e.target.closest('.volume-control')) return;
                 e.preventDefault();
                 start();
             }, { passive: false });
@@ -1321,7 +1417,7 @@
                 if (!ctx) initAudio();
             }, { once: true });
 
-            console.log('拉伸Tap 已加载');
+            console.log('拉伸Tap 已加载 (网格隐藏，背景音量可调)');
         }
 
         if (document.readyState === 'loading') {
