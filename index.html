@@ -351,8 +351,8 @@
 
         const COLS = 4;
         const ROWS = 6;
-        const SAMPLE_NAMES = ['boom', 'sla', 'sl', 'a'];//赤色黎明，拉，伸，朱可夫
-        const SAMPLE_FILES = ['boom.wav', 'sla.wav', 'sl.wav', 'a.wav'];
+        const SAMPLE_NAMES = ['boom', 'da', 'sla', 'a'];//赤色黎明，动员兵，拉，朱可夫
+        const SAMPLE_FILES = ['boom.wav', 'da.wav', 'sl.wav', 'a.wav'];
 
         // ---------- 全局状态 ----------
         let ctx = null;
@@ -657,7 +657,7 @@
             const gain = ctx.createGain();
             let volFactor = 1.0;
             if (sampleName === 'boom') volFactor = 0.5;
-            else if (sampleName === 'a') volFactor = 3.0;
+            else if (sampleName === 'a') volFactor = 4.0;
             const baseGain = 0.9 * volFactor;
             gain.gain.setValueAtTime(baseGain, when);
             gain.gain.exponentialRampToValueAtTime(0.001, when + 0.4);
@@ -1507,7 +1507,7 @@
                 if (!ctx) initAudio();
             }, { once: true });
 
-            console.log('拉伸Tap 已加载 (行数6，轨道顺序 boom,sla,sl,a)');
+            console.log('拉伸Tap 已加载');
         }
 
         if (document.readyState === 'loading') {
