@@ -656,8 +656,9 @@
             source.playbackRate.setValueAtTime(rate, when);
             const gain = ctx.createGain();
             let volFactor = 1.0;
-            if (sampleName === 'boom') volFactor = 0.5;
-            else if (sampleName === 'a') volFactor = 4.0;
+            if (sampleName === 'boom') volFactor = 1.0 / rate;
+            else if (sampleName === 'a') volFactor = 8.0 / rate;
+            else volFactor = 2.0 / rate;
             const baseGain = 0.9 * volFactor;
             gain.gain.setValueAtTime(baseGain, when);
             gain.gain.exponentialRampToValueAtTime(0.001, when + 0.4);
